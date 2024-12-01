@@ -4,49 +4,84 @@ using UnityEngine;
 
 public class FollowWP : MonoBehaviour
 {
-    public GameObject[] waypoints;
+    Transform goal;
+
+    float speed = 10.0f;
+    float accuracy = 2.0f;
+    float rotSpeed = 4.0f;
+
+    public GameObject wpManager;
+    GameObject[] wps;
+    GameObject currentNode;
     int currentWP = 0;
+    Graph g;
 
-    public float speed = 10.0f;
-    public float rotSpeed = 10.0f;
-    public float lookAhead = 10.0f;
-
-    GameObject tracker;
     // Start is called before the first frame update
     void Start()
     {
-        tracker= GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        DestroyImmediate(tracker.GetComponent<Collider>());
-        tracker.GetComponent<MeshRenderer>().enabled = false;
-        tracker.transform.position = this.transform.position;
-        tracker.transform.rotation = this.transform.rotation;
+        wps = wpManager.GetComponent<WPManager>().waypoints;
+        g = wpManager.GetComponent<WPManager>().graph;
+        currentNode = wps[currentWP];
     }
 
-    void ProgressTracker()
+    public void GoToCity()
     {
-        if (Vector3.Distance(tracker.transform.position, this.transform.position) > lookAhead) return;
+        g.AStar(currentNode, wps[0]);
+        currentWP = 0;
+    }
 
-        if (Vector3.Distance(tracker.transform.position, waypoints[currentWP].transform.position) < 3)
-            currentWP++;
+    public void GoToRuin()
+    {
+        g.AStar(currentNode, wps[11]);
+        currentWP = 0;
+    }
 
-        if (currentWP >= waypoints.Length)
-            currentWP = 0;
+    public void GoToCactus()
+    {
+        g.AStar(currentNode, wps[9]);
+        currentWP = 0;
+    }
 
-        tracker.transform.LookAt(waypoints[currentWP].transform);
-        tracker.transform.Translate(0, 0, (speed +2) * Time.deltaTime);
+    public void GoToHeli()
+    {
+        g.AStar(currentNode, wps[6]);
+        currentWP = 0;
+    }
+
+    public void GoToPump()
+    {
+        g.AStar(currentNode, wps[14]);
+        currentWP = 0;
+    }
+
+    public void GoToPalmTrees()
+    {
+        g.AStar(currentNode, wps[3]);
+        currentWP = 0;
     }
 
     // Update is called once per frame
-    void Update()
+    void LateUpdate()
     {
-        ProgressTracker();
+        if (g.pathList.Count == 0 || currentWP == g.pathList.Count)
+            return;
 
-        this.transform.LookAt(waypoints[currentWP].transform);
+        if (Vector3.Distance(g.pathList[currentWP].getId().transform.position, this.transform.position) < accuracy)
+        {
+            currentNode = g.pathList[currentWP].getId();
+            currentWP++;
+        }
 
-        Quaternion lookatWP = Quaternion.LookRotation(waypoints[currentWP].transform.position - this.transform.position);
+        if(currentWP < g.pathList.Count)
+        {
+            goal = g.pathList[currentWP].getId().transform;
+            Vector3 lookAtGoal = new Vector3(goal.position.x, this.transform.position.y, goal.position.z);
 
-        this.transform.rotation = Quaternion.Slerp(transform.rotation, lookatWP, rotSpeed * Time.deltaTime);
+            Vector3 direction = lookAtGoal - this.transform.position;
 
-        this.transform.Translate(0, 0, speed * Time.deltaTime);
+            this.transform.rotation = Quaternion.Slerp(this.transform.rotation, Quaternion.LookRotation(direction), Time.deltaTime * rotSpeed);
+
+            this.transform.Translate(0, 0, speed * Time.deltaTime);
+        }
     }
 }
